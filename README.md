@@ -21,4 +21,4 @@ Streamlit web app.
 - Streamlit
 - Joblib
 
-##  Project Structure
+**Live Demo:** https://flightpricepredictor-djvvkempjkp6qgjdqudguz.streamlit.app/
