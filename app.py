@@ -70,27 +70,6 @@ st.markdown("""
         font-size: 1.1rem;
     }
     
-    /* White Cards */
-    .card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-        border: 1px solid #cbd5e1;
-        margin-bottom: 1rem;
-    }
-    .card-title {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 1.2rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-bottom: 2px solid #f1f5f9;
-        padding-bottom: 0.5rem;
-    }
-    
     /* Price Box (Teal Gradient) */
     .price-box {
         background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
@@ -151,6 +130,14 @@ st.markdown("""
     div[data-testid="stMetricLabel"] {
         color: #64748b;
     }
+
+    /* Customizing the native Streamlit bordered container */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: white !important;
+        border-radius: 16px !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -188,7 +175,6 @@ destination = st.sidebar.selectbox(
 st.sidebar.markdown("---")
 st.sidebar.subheader("📅 Journey Date (2019)")
 
-# Option A: Number inputs instead of a calendar picker
 journey_month = st.sidebar.number_input(
     "Journey Month (1-12)", 
     min_value=1, 
@@ -213,17 +199,14 @@ dep_time = st.sidebar.time_input("Departure time", value=pd.to_datetime("10:30")
 arr_time = st.sidebar.time_input("Arrival time", value=pd.to_datetime("14:45").time())
 
 # ---- Automatic Duration Calculation ----
-# Using a dummy date for calculation since we only care about the time difference
 dep_datetime = datetime.combine(datetime.today(), dep_time)
 arr_datetime = datetime.combine(datetime.today(), arr_time)
 
-# Handle overnight flights (arrival is earlier than departure)
 if arr_datetime < dep_datetime:
     arr_datetime += timedelta(days=1)
 
 duration_minutes = int((arr_datetime - dep_datetime).total_seconds() / 60)
 
-# Display the calculated duration in the sidebar
 st.sidebar.info(f"⏱️ **Calculated Duration:** {duration_minutes} minutes")
 
 st.sidebar.markdown("---")
@@ -240,7 +223,6 @@ total_stops = st.sidebar.selectbox(
 def build_input_row():
     row = {col: 0 for col in feature_columns}
 
-    # Numeric features
     row["Journey_Day"] = journey_day
     row["Journey_Month"] = journey_month
     row["Dep_Hour"] = dep_time.hour
@@ -249,7 +231,6 @@ def build_input_row():
     row["Arrival_Min"] = arr_time.minute
     row["Duration"] = duration_minutes
 
-    # One-hot categorical features
     for prefix, value in [
         ("Airline_", airline),
         ("Source_", source),
@@ -264,55 +245,53 @@ def build_input_row():
 
 
 # ==========================================
-# Main layout: two columns (summary | prediction)
+# Main layout: two columns
 # ==========================================
 left, right = st.columns([1, 1], gap="large")
 
 with left:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">📋 Flight Summary</div>', unsafe_allow_html=True)
-
-    c1, c2 = st.columns(2)
-    c1.metric("Airline", airline)
-    c2.metric("Stops", total_stops)
-    c1.metric("Source", source)
-    c2.metric("Destination", destination)
-    
-    # Formatting the date nicely (e.g., "June 15")
-    month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    formatted_date = f"{month_names[journey_month - 1]} {journey_day}, 2019"
-    
-    c1.metric("Journey Date", formatted_date)
-    c2.metric("Duration", f"{duration_minutes} min")
-    c1.metric("Departure", dep_time.strftime("%H:%M"))
-    c2.metric("Arrival", arr_time.strftime("%H:%M"))
-
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Native streamlit container with border=True (acts as our card)
+    with st.container(border=True):
+        st.markdown("<h3 style='margin-top:0; color:#1e293b; font-size:1.15rem;'>📋 Flight Summary</h3>", unsafe_allow_html=True)
+        
+        c1, c2 = st.columns(2)
+        c1.metric("Airline", airline)
+        c2.metric("Stops", total_stops)
+        c1.metric("Source", source)
+        c2.metric("Destination", destination)
+        
+        month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        formatted_date = f"{month_names[journey_month - 1]} {journey_day}, 2019"
+        
+        c1.metric("Journey Date", formatted_date)
+        c2.metric("Duration", f"{duration_minutes} min")
+        c1.metric("Departure", dep_time.strftime("%H:%M"))
+        c2.metric("Arrival", arr_time.strftime("%H:%M"))
 
 with right:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">🔮 Predict Ticket Price</div>', unsafe_allow_html=True)
-    st.write("Confirm your details and click the button below.")
+    # Native streamlit container with border=True
+    with st.container(border=True):
+        st.markdown("<h3 style='margin-top:0; color:#1e293b; font-size:1.15rem;'>🔮 Predict Ticket Price</h3>", unsafe_allow_html=True)
+        st.write("Confirm your details and click the button below.")
+        st.write("") # Small spacer
 
-    if st.button("Predict Price", type="primary"):
-        input_df = build_input_row()
-        input_scaled = scaler.transform(input_df)
-        prediction_normalized = model.predict(input_scaled)[0]
-        predicted_price = prediction_normalized * (Y_MAX - Y_MIN) + Y_MIN
+        if st.button("Predict Price", type="primary"):
+            input_df = build_input_row()
+            input_scaled = scaler.transform(input_df)
+            prediction_normalized = model.predict(input_scaled)[0]
+            predicted_price = prediction_normalized * (Y_MAX - Y_MIN) + Y_MIN
 
-        st.markdown(f"""
-        <div class="price-box">
-            <div class="price-label">Estimated Flight Price</div>
-            <div class="price-value">₹ {predicted_price:,.0f}</div>
-        </div>
-        """, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="price-box">
+                <div class="price-label">Estimated Flight Price</div>
+                <div class="price-value">₹ {predicted_price:,.0f}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.caption(
-            "This is a machine-learning estimate. Actual prices vary based on "
-            "real-time demand, availability, and airline policies."
-        )
-
-    st.markdown('</div>', unsafe_allow_html=True)
+            st.caption(
+                "This is a machine-learning estimate. Actual prices vary based on "
+                "real-time demand, availability, and airline policies."
+            )
 
 # ==========================================
 # Footer
