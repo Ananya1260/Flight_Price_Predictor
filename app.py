@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+from datetime import date
 
 # ==========================================
 # Load artifacts
@@ -27,70 +28,185 @@ Y_MAX = 23001
 st.set_page_config(
     page_title="Flight Price Predictor",
     page_icon="✈️",
-    layout="centered"
+    layout="wide",
 )
 
-st.title("✈️ Flight Price Predictor")
-st.markdown(
-    "Enter flight details below to get an **estimated ticket price** (in INR), "
-    "powered by a Multilayer Perceptron (MLP) neural network."
-)
-st.markdown("---")
+# ==========================================
+# Custom CSS for a nicer look
+# ==========================================
+st.markdown("""
+<style>
+    .main {
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+    }
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 1100px;
+    }
+    .hero {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
+        padding: 2rem 2.5rem;
+        border-radius: 20px;
+        color: white;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
+    }
+    .hero h1 {
+        color: white !important;
+        margin: 0 0 0.5rem 0;
+        font-size: 2.2rem;
+    }
+    .hero p {
+        color: rgba(255,255,255,0.9);
+        margin: 0;
+        font-size: 1rem;
+    }
+    .card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        border: 1px solid #eef2f7;
+        margin-bottom: 1rem;
+    }
+    .card-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .price-box {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.35);
+        margin: 1rem 0;
+    }
+    .price-label {
+        font-size: 0.9rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+    .price-value {
+        font-size: 3rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .stButton > button {
+        width: 100%;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        border: none;
+        padding: 0.85rem 1rem;
+        border-radius: 12px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(79, 70, 229, 0.45);
+        color: white;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# Hero header
+# ==========================================
+st.markdown("""
+<div class="hero">
+    <h1>✈️ Flight Price Predictor</h1>
+    <p>Get an estimated ticket price (in INR) powered by a Multilayer Perceptron (MLP) neural network.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # ==========================================
 # Sidebar inputs
 # ==========================================
-st.sidebar.header("Flight Details")
+st.sidebar.header("🛫 Flight Details")
 
 airline = st.sidebar.selectbox(
     "Airline",
     ["IndiGo", "Air India", "Jet Airways", "SpiceJet",
-     "Vistara", "GoAir", "Multiple carriers", "Air Asia"]
+     "Vistara", "GoAir", "Multiple carriers", "Air Asia"],
 )
 
 source = st.sidebar.selectbox(
     "Source",
-    ["Banglore", "Kolkata", "Delhi", "Chennai", "Mumbai"]
+    ["Banglore", "Kolkata", "Delhi", "Chennai", "Mumbai"],
 )
 
 destination = st.sidebar.selectbox(
     "Destination",
-    ["New Delhi", "Banglore", "Cochin", "Kolkata", "Delhi", "Hyderabad"]
+    ["New Delhi", "Banglore", "Cochin", "Kolkata", "Delhi", "Hyderabad"],
 )
 
-journey_day = st.sidebar.slider("Journey Day", 1, 31, 15)
-journey_month = st.sidebar.slider("Journey Month", 1, 12, 6)
+st.sidebar.markdown("---")
+st.sidebar.subheader("📅 Journey Date")
 
-dep_hour = st.sidebar.slider("Departure Hour", 0, 23, 10)
-dep_min = st.sidebar.slider("Departure Minute", 0, 59, 30)
+journey_date = st.sidebar.date_input(
+    "Select journey date",
+    value=date(2019, 6, 15),
+    min_value=date(2019, 1, 1),
+    max_value=date(2020, 12, 31),
+    format="YYYY-MM-DD",
+    help="The model was trained on data from 2019, so pick a date in that range for best results.",
+)
 
-arrival_hour = st.sidebar.slider("Arrival Hour", 0, 23, 14)
-arrival_min = st.sidebar.slider("Arrival Minute", 0, 59, 45)
+st.sidebar.markdown("---")
+st.sidebar.subheader("🕐 Departure Time")
+dep_time = st.sidebar.time_input("Departure time", value=pd.to_datetime("10:30").time())
 
-duration_minutes = st.sidebar.slider("Duration (minutes)", 60, 1500, 300)
+st.sidebar.subheader("🕓 Arrival Time")
+arr_time = st.sidebar.time_input("Arrival time", value=pd.to_datetime("14:45").time())
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("⏱️ Duration & Stops")
+
+duration_minutes = st.sidebar.number_input(
+    "Duration (minutes)",
+    min_value=60,
+    max_value=1500,
+    value=300,
+    step=5,
+    help="Total flight duration in minutes.",
+)
 
 total_stops = st.sidebar.selectbox(
     "Total Stops",
-    ["non-stop", "1 stop", "2 stops", "3 stops", "4 stops"]
+    ["non-stop", "1 stop", "2 stops", "3 stops", "4 stops"],
 )
 
 # ==========================================
 # Build input row
 # ==========================================
 def build_input_row():
-    # Start with all zeros — matches feature_columns exactly
     row = {col: 0 for col in feature_columns}
 
-    # Numeric features (always present)
-    row["Journey_Day"] = journey_day
-    row["Journey_Month"] = journey_month
-    row["Dep_Hour"] = dep_hour
-    row["Dep_Min"] = dep_min
-    row["Arrival_Hour"] = arrival_hour
-    row["Arrival_Min"] = arrival_min
+    # Numeric features
+    row["Journey_Day"] = journey_date.day
+    row["Journey_Month"] = journey_date.month
+    row["Dep_Hour"] = dep_time.hour
+    row["Dep_Min"] = dep_time.minute
+    row["Arrival_Hour"] = arr_time.hour
+    row["Arrival_Min"] = arr_time.minute
     row["Duration"] = duration_minutes
 
-    # One-hot categorical features (only set if the column exists)
+    # One-hot categorical features
     for prefix, value in [
         ("Airline_", airline),
         ("Source_", source),
@@ -103,31 +219,55 @@ def build_input_row():
 
     return pd.DataFrame([row])[feature_columns]
 
+
 # ==========================================
-# Prediction
+# Main layout: two columns (summary | prediction)
 # ==========================================
-if st.button("🔮 Predict Price", type="primary"):
-    input_df = build_input_row()
-    input_scaled = scaler.transform(input_df)
-    prediction_normalized = model.predict(input_scaled)[0]
-    predicted_price = prediction_normalized * (Y_MAX - Y_MIN) + Y_MIN
+left, right = st.columns([1, 1], gap="large")
 
-    st.markdown("---")
-    st.success(f"### 💰 Estimated Flight Price: ₹ {predicted_price:,.0f}")
-    st.caption(
-        "This is a machine-learning estimate. Actual prices vary based on "
-        "real-time demand, availability, and airline policies."
-    )
+with left:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">📋 Flight Summary</div>', unsafe_allow_html=True)
 
-    with st.expander("📋 View entered flight details"):
-        st.write(f"- **Airline:** {airline}")
-        st.write(f"- **Source:** {source}")
-        st.write(f"- **Destination:** {destination}")
-        st.write(f"- **Journey:** Day {journey_day}, Month {journey_month}")
-        st.write(f"- **Departure:** {dep_hour:02d}:{dep_min:02d}")
-        st.write(f"- **Arrival:** {arrival_hour:02d}:{arrival_min:02d}")
-        st.write(f"- **Duration:** {duration_minutes} min")
-        st.write(f"- **Total stops:** {total_stops}")
+    c1, c2 = st.columns(2)
+    c1.metric("Airline", airline)
+    c2.metric("Stops", total_stops)
+    c1.metric("Source", source)
+    c2.metric("Destination", destination)
+    c1.metric("Journey Date", journey_date.strftime("%d %b %Y"))
+    c2.metric("Duration", f"{duration_minutes} min")
+    c1.metric("Departure", dep_time.strftime("%H:%M"))
+    c2.metric("Arrival", arr_time.strftime("%H:%M"))
 
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with right:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">🔮 Predict Ticket Price</div>', unsafe_allow_html=True)
+    st.write("Confirm your details and click the button below.")
+
+    if st.button("Predict Price", type="primary"):
+        input_df = build_input_row()
+        input_scaled = scaler.transform(input_df)
+        prediction_normalized = model.predict(input_scaled)[0]
+        predicted_price = prediction_normalized * (Y_MAX - Y_MIN) + Y_MIN
+
+        st.markdown(f"""
+        <div class="price-box">
+            <div class="price-label">Estimated Flight Price</div>
+            <div class="price-value">₹ {predicted_price:,.0f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.caption(
+            "This is a machine-learning estimate. Actual prices vary based on "
+            "real-time demand, availability, and airline policies."
+        )
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ==========================================
+# Footer
+# ==========================================
 st.markdown("---")
 st.caption("Built with Streamlit + Scikit-learn | Flight Price Prediction Project")
