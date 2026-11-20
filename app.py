@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-from datetime import date
+from datetime import date, datetime, timedelta
 
 # ==========================================
 # Load artifacts
@@ -168,23 +168,25 @@ journey_date = st.sidebar.date_input(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("🕐 Departure Time")
+st.sidebar.subheader("🕐 Flight Times")
 dep_time = st.sidebar.time_input("Departure time", value=pd.to_datetime("10:30").time())
-
-st.sidebar.subheader("🕓 Arrival Time")
 arr_time = st.sidebar.time_input("Arrival time", value=pd.to_datetime("14:45").time())
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("⏱️ Duration & Stops")
+# ---- Automatic Duration Calculation ----
+dep_datetime = datetime.combine(journey_date, dep_time)
+arr_datetime = datetime.combine(journey_date, arr_time)
 
-duration_minutes = st.sidebar.number_input(
-    "Duration (minutes)",
-    min_value=60,
-    max_value=1500,
-    value=300,
-    step=5,
-    help="Total flight duration in minutes.",
-)
+# Handle overnight flights (arrival is earlier than departure)
+if arr_datetime < dep_datetime:
+    arr_datetime += timedelta(days=1)
+
+duration_minutes = int((arr_datetime - dep_datetime).total_seconds() / 60)
+
+# Display the calculated duration in the sidebar
+st.sidebar.info(f"⏱️ **Calculated Duration:** {duration_minutes} minutes")
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🛑 Stops")
 
 total_stops = st.sidebar.selectbox(
     "Total Stops",
@@ -204,7 +206,7 @@ def build_input_row():
     row["Dep_Min"] = dep_time.minute
     row["Arrival_Hour"] = arr_time.hour
     row["Arrival_Min"] = arr_time.minute
-    row["Duration"] = duration_minutes
+    row["Duration"] = duration_minutes # Now calculated automatically!
 
     # One-hot categorical features
     for prefix, value in [
