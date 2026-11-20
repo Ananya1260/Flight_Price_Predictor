@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 # ==========================================
 # Load artifacts
@@ -32,94 +32,124 @@ st.set_page_config(
 )
 
 # ==========================================
-# Custom CSS for a nicer look
+# Custom CSS for a completely new look
 # ==========================================
 st.markdown("""
 <style>
+    /* Main background */
     .main {
-        background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+        background: linear-gradient(180deg, #f0f4f8 0%, #e2e8f0 100%);
     }
+    
+    /* Container padding */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 2rem;
         max-width: 1100px;
     }
+    
+    /* Hero Header (Deep Blue to Teal Gradient) */
     .hero {
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
-        padding: 2rem 2.5rem;
+        background: linear-gradient(135deg, #1e3a8a 0%, #0d9488 100%);
+        padding: 2.5rem 2.5rem;
         border-radius: 20px;
         color: white;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(30, 58, 138, 0.25);
+        border: 1px solid #14b8a6;
     }
     .hero h1 {
         color: white !important;
         margin: 0 0 0.5rem 0;
-        font-size: 2.2rem;
+        font-size: 2.4rem;
+        font-weight: 800;
     }
     .hero p {
-        color: rgba(255,255,255,0.9);
+        color: #ccfbf1;
         margin: 0;
-        font-size: 1rem;
+        font-size: 1.1rem;
     }
+    
+    /* White Cards */
     .card {
         background: white;
         border-radius: 16px;
         padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-        border: 1px solid #eef2f7;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        border: 1px solid #cbd5e1;
         margin-bottom: 1rem;
     }
     .card-title {
-        font-size: 1.05rem;
+        font-size: 1.15rem;
         font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 1rem;
+        color: #1e293b;
+        margin-bottom: 1.2rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        border-bottom: 2px solid #f1f5f9;
+        padding-bottom: 0.5rem;
     }
+    
+    /* Price Box (Teal Gradient) */
     .price-box {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
         color: white;
-        padding: 2rem;
+        padding: 2.5rem;
         border-radius: 20px;
         text-align: center;
-        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.35);
-        margin: 1rem 0;
+        box-shadow: 0 10px 30px rgba(20, 184, 166, 0.3);
+        margin: 1.5rem 0;
+        border: 1px solid #5eead4;
     }
     .price-label {
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         letter-spacing: 2px;
         text-transform: uppercase;
         opacity: 0.9;
         margin-bottom: 0.5rem;
     }
     .price-value {
-        font-size: 3rem;
+        font-size: 3.5rem;
         font-weight: 800;
         line-height: 1;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
+    
+    /* Primary Button (Deep Blue) */
     .stButton > button {
         width: 100%;
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
         color: white;
         border: none;
         padding: 0.85rem 1rem;
         border-radius: 12px;
-        font-size: 1.05rem;
+        font-size: 1.1rem;
         font-weight: 600;
         transition: all 0.2s ease;
-        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+        box-shadow: 0 4px 15px rgba(30, 58, 138, 0.3);
     }
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(79, 70, 229, 0.45);
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        box-shadow: 0 8px 25px rgba(30, 58, 138, 0.5);
         color: white;
     }
+    
+    /* Styling the sidebar slightly */
+    [data-testid="stSidebar"] {
+        background-color: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    /* Metric values */
     div[data-testid="stMetricValue"] {
-        font-size: 1rem;
-        font-weight: 600;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #64748b;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -156,15 +186,25 @@ destination = st.sidebar.selectbox(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("📅 Journey Date")
+st.sidebar.subheader("📅 Journey Date (2019)")
 
-journey_date = st.sidebar.date_input(
-    "Select journey date",
-    value=date(2019, 6, 15),
-    min_value=date(2019, 1, 1),
-    max_value=date(2020, 12, 31),
-    format="YYYY-MM-DD",
-    help="The model was trained on data from 2019, so pick a date in that range for best results.",
+# Option A: Number inputs instead of a calendar picker
+journey_month = st.sidebar.number_input(
+    "Journey Month (1-12)", 
+    min_value=1, 
+    max_value=12, 
+    value=6,
+    step=1,
+    help="The ML model was trained on 2019 data. Select the month (e.g., 6 for June)."
+)
+
+journey_day = st.sidebar.number_input(
+    "Journey Day (1-31)", 
+    min_value=1, 
+    max_value=31, 
+    value=15,
+    step=1,
+    help="Select the day of the month."
 )
 
 st.sidebar.markdown("---")
@@ -173,8 +213,9 @@ dep_time = st.sidebar.time_input("Departure time", value=pd.to_datetime("10:30")
 arr_time = st.sidebar.time_input("Arrival time", value=pd.to_datetime("14:45").time())
 
 # ---- Automatic Duration Calculation ----
-dep_datetime = datetime.combine(journey_date, dep_time)
-arr_datetime = datetime.combine(journey_date, arr_time)
+# Using a dummy date for calculation since we only care about the time difference
+dep_datetime = datetime.combine(datetime.today(), dep_time)
+arr_datetime = datetime.combine(datetime.today(), arr_time)
 
 # Handle overnight flights (arrival is earlier than departure)
 if arr_datetime < dep_datetime:
@@ -200,13 +241,13 @@ def build_input_row():
     row = {col: 0 for col in feature_columns}
 
     # Numeric features
-    row["Journey_Day"] = journey_date.day
-    row["Journey_Month"] = journey_date.month
+    row["Journey_Day"] = journey_day
+    row["Journey_Month"] = journey_month
     row["Dep_Hour"] = dep_time.hour
     row["Dep_Min"] = dep_time.minute
     row["Arrival_Hour"] = arr_time.hour
     row["Arrival_Min"] = arr_time.minute
-    row["Duration"] = duration_minutes # Now calculated automatically!
+    row["Duration"] = duration_minutes
 
     # One-hot categorical features
     for prefix, value in [
@@ -236,7 +277,12 @@ with left:
     c2.metric("Stops", total_stops)
     c1.metric("Source", source)
     c2.metric("Destination", destination)
-    c1.metric("Journey Date", journey_date.strftime("%d %b %Y"))
+    
+    # Formatting the date nicely (e.g., "June 15")
+    month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    formatted_date = f"{month_names[journey_month - 1]} {journey_day}, 2019"
+    
+    c1.metric("Journey Date", formatted_date)
     c2.metric("Duration", f"{duration_minutes} min")
     c1.metric("Departure", dep_time.strftime("%H:%M"))
     c2.metric("Arrival", arr_time.strftime("%H:%M"))
